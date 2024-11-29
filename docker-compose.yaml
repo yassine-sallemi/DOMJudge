@@ -1,0 +1,54 @@
+services:
+  mariadb:
+    container_name: mariadb
+    image: docker.io/mariadb
+    hostname: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: domjudge
+      MYSQL_USER: domjudge
+      MYSQL_PASSWORD: djpw
+      MYSQL_DATABASE: domjudge
+    ports:
+      - 13306:3306
+    command: --max-connections=1000 --max-allowed-packet=1024M
+    volumes:
+      - /var/lib/mysql
+    networks:
+      - domjudge
+
+  domserver:
+    container_name: domserver
+    image: docker.io/domjudge/domserver
+    hostname: domserver
+    environment:
+      MYSQL_ROOT_PASSWORD: domjudge
+      MYSQL_USER: domjudge
+      MYSQL_PASSWORD: djpw
+      MYSQL_DATABASE: domjudge
+      MYSQL_HOST: mariadb
+      CONTAINER_TIMEZONE: Africa/Tunis
+      DJ_DB_INSTALL_BARE: 1
+    networks:
+      - domjudge
+    ports:
+      - 12345:80
+
+  # Add judgehosts here as many as you need
+  judgehost-0:
+    container_name: judgehost-0
+    image: domjudge/judgehost:latest
+    privileged: true
+    hostname: judgedaemon-0
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - domjudge
+    depends_on:
+      - domserver
+    environment:
+      - DAEMON_ID=0
+      - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
+
+networks:
+  domjudge:
+    driver: bridge
