@@ -14,8 +14,7 @@ services:
           - node.labels.role == mariadb
       restart_policy:
         condition: on-failure
-
-    hostname: mariadb
+    #hostname: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: domjudge
       MYSQL_USER: domjudge
@@ -30,12 +29,12 @@ services:
     volumes:
       - mariadb-data:/var/lib/mysql:rw
     networks:
-      - domjudge
+      - dj_network
 
   domserver:
     #container_name: domserver
     image: domjudge/domserver
-    hostname: domserver
+    #hostname: domserver
     deploy:
       replicas: 1
       placement:
@@ -43,6 +42,12 @@ services:
           - node.labels.role == domserver
       restart_policy:
         condition: on-failure
+    # it's better to add a condition to the depends_on (for example condition: service_healthy ) but swarm doesnt support the 
+    # new compose syntax , hence you would get an error , digged through github but didn't seem to find a solution , if you found
+    # a syntax or specific version of compose that would reserve the error fix it and push it pls <3
+    depends_on:
+      - mariadb
+       #condition: service_healthy
     environment:
       MYSQL_ROOT_PASSWORD: domjudge
       MYSQL_USER: domjudge
@@ -52,7 +57,7 @@ services:
       CONTAINER_TIMEZONE: Africa/Tunis
       DJ_DB_INSTALL_BARE: 1
     networks:
-      - domjudge
+      - dj_network
     ports:
       - 12345:80
 
@@ -61,5 +66,6 @@ volumes:
   mariadb-data:
 
 networks:
-  domjudge:
+  dj_network:
     driver: overlay
+    attachable: true 
