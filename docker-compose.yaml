@@ -5,7 +5,7 @@ services:
     # the container_name is deprecated in swarm , since swarm might be used to scale containers , and the container name must be unique
     # thus it would cause errors , so remove it and let swarm itself name the containers , while u reference them by service name or 
     # hostname
-    container_name: mariadb
+    #container_name: mariadb
     image: mariadb
     deploy:
       replicas: 1
@@ -33,7 +33,7 @@ services:
       - domjudge
 
   domserver:
-    container_name: domserver
+    #container_name: domserver
     image: domjudge/domserver
     hostname: domserver
     deploy:
