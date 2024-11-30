@@ -2,6 +2,9 @@ services:
   # for the env vars , it's better to use MARIADB_* instead of MYSQL_* , the image supports both and this preference is for clarity purposes only
   # We used MYSQL_* here because that's the mentionned configuration in the DOM JUDGE image
   mariadb:
+    # the container_name is deprecated in swarm , since swarm might be used to scale containers , and the container name must be unique
+    # thus it would cause errors , so remove it and let swarm itself name the containers , while u reference them by service name or 
+    # hostname
     container_name: mariadb
     image: mariadb
     deploy:
