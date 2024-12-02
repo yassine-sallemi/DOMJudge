@@ -13,7 +13,7 @@ services:
         constraints:
           - node.labels.role == mariadb
       restart_policy:
-        condition: on-failure
+        condition: any
     #hostname: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: domjudge
@@ -47,7 +47,7 @@ services:
     # a syntax or specific version of compose that would reserve the error fix it and push it pls <3
     depends_on:
       - mariadb
-       #condition: service_healthy
+      #condition: service_healthy
     environment:
       MYSQL_ROOT_PASSWORD: domjudge
       MYSQL_USER: domjudge
@@ -60,6 +60,25 @@ services:
       - dj_network
     ports:
       - 12345:80
+  domhost:
+    image: domjudge/domhost
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == domhost
+      restart_policy:
+        condition: any
+    networks:
+      - dj_network
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    environment:
+      DAEMON_ID: 0
+      JUDGEDAEMON_PASSWORD: pass
+      JUDGEDAEMON_USERNAME: judgehost
+      DOMSERVER_BASEURL: http://domserver/
+
 
 
 volumes:
