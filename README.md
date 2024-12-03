@@ -1,84 +1,141 @@
-# DOMjudge Docker Setup
+**Overview**
+This project provides a Docker Swarm deployment for DOMjudge, including three services:
 
-This repository contains a Docker Compose setup for running a DOMjudge environment, including:
+1. **MariaDB** : Database backend for DOMjudge.
 
-- **MariaDB**: Database server for storing DOMjudge data.
-- **DOMserver**: The main server for managing contests and participants.
-- **Judgehost**: Worker nodes that evaluate submitted solutions.
+2. **DOMserver** : Web interface and central server for DOMjudge.
 
-## Prerequisites
+3. **Judgehost** : Dynamically deployed judge nodes for contest evaluation.
+   **Prerequisites**
 
-- **Docker and Docker Compose** installed on your system.
-- **Control Groups (cgroups)** enabled on your host system to allow the judgehost to manage resource constraints.
-- **Adequate permissions** to run Docker containers.
+- Docker and Docker Compose installed on all nodes.
 
-## Getting Started
+- A configured Docker Swarm cluster with the following node roles:
 
-### 1. Clone this Repository
+  - **`domserver`** : Manager node.
 
-```bash
-git clone <repository-url>
-cd <repository-directory>
-```
+  - **`mariadb`** : Worker node.
 
-### 2. Update Configuration
-
-Replace the placeholder `TO_BE_REPLACED_AFTER_DOMSERVER_INIT` in the `judgehost-0` section of the `docker-compose.yml` file with the actual password after initializing the DOMserver.
-You can retrieve it from the `DOMServer` container from the logs
-Alternatively, the password can be found in the file `/opt/domjudge/domserver/etc/restapi.secret` within the `DOMServer` container.
-
-### 3. Start the Containers
-
-Run the following command to start all services:
-
-```bash
-docker compose up -d
-```
-
-### 4. Access the Services
-
-- **DOMserver** : Open your browser and navigate to `http://localhost:12345`.
-
-- **MariaDB** : Connect via `localhost:13306`.
-
-### 5. Stopping the Containers
-
-To stop the services, run:
-
-```bash
-docker compose down
-```
-
-## Customization
-
-- **Database Configuration** : Update the MariaDB settings (e.g., user, password, and database) in the `environment` section of the `mariadb` service.
-
-- **Judgehost Scaling** : Add additional judgehost containers by copying the `judgehost-0` section and incrementing the `DAEMON_ID` value.
-
-## Notes
-
-- Ensure the `DJ_DB_INSTALL_BARE` is set to `1` for the first run to initialize the database.
-
-- The `volumes` configuration for MariaDB (`/var/lib/mysql`) should point to a persistent directory on the host for data storage.
-
-## Troubleshooting
-
-- Check logs for a specific service:
-
-```bash
-docker logs <container_name>
-```
-
-- Verify container status:
-
-```bash
-docker ps
-```
-
-## References
-
-- [DOMjudge Documentation](https://www.domjudge.org/docs/manual/8.2/index.html)
+  - **`judgehost`** : Worker node.
 
 ---
 
-Feel free to contribute or report issues!
+**Usage** **1. Configuration**
+
+1. Clone this repository:
+
+```bash
+git clone <repository-url>
+cd <repository-folder>
+```
+
+2. Create a `.env` file and configure the following variables:
+
+```env
+DB_PASS=domjudgepass
+DOMSERVER_BASEURL=http://domserver/
+JUDGE_PASS=domjudge
+```
+
+3. Verify the `docker-compose.yml` file aligns with your requirements (e.g., network configuration, resource constraints).
+   **2. Initialize the Swarm** On the `domserver`\*\* node:
+
+```bash
+docker swarm init --advertise-addr <MANAGER-IP>
+```
+
+**3. Add nodes**
+
+On the `mariadb`** and the `judgehost`** node:
+
+```bash
+docker swarm join --token <TOKEN> <MANAGER-IP>:2377
+
+```
+
+**4. Label Nodes**
+Label the nodes to define roles:
+
+```bash
+docker node update --label-add role=domserver <DOMSERVER-NODE-NAME>
+docker node update --label-add role=mariadb <MARIADB-NODE-NAME>
+docker node update --label-add role=judgehost <JUDGEHOST-NODE-NAME>
+```
+
+**5. Deploy the Stack**
+Deploy the DOMjudge stack:
+
+```bash
+docker stack deploy -c docker-compose.yml domjudge
+```
+
+Monitor the logs to ensure services start successfully:
+
+```bash
+docker service logs -f domjudge_domserver
+```
+
+**6. Retrieve Initial Passwords**
+Wait for the DOMserver to initialize and look for the following logs:
+
+```text
+domserver_1  | Initial admin password is XXXXXXXXXX
+domserver_1  |
+domserver_1  | Initial judgehost password is XXXXXXXXXXXXX
+```
+
+- Log in to the DOMjudge web interface at `http://<DOMSERVER-IP>:12345` with:
+
+  - **Username:** `admin`
+
+  - **Password:** `<Admin Password>`
+
+- Change the admin password immediately.
+
+- Update the `.env` file with the retrieved judgehost password:
+
+```env
+JUDGE_PASS=<Judgehost Password>
+```
+
+**7. Restart the Stack** Apply the updated `.env` file:
+
+```bash
+docker stack deploy -c docker-compose.yml domjudge
+```
+
+---
+
+**Advanced Usage** **Scaling Judgehosts**
+To scale the number of judgehosts:
+
+```bash
+docker service scale domjudge_judgehost=<NUMBER-OF-JUDGEHOSTS>
+```
+
+**Restricting Judgehost Placement**
+To ensure judgehosts run only on worker nodes:
+
+1. Set the `RESTRICT_JUDGE_ON` variable in `.env` to `manager`.
+
+---
+
+**Troubleshooting** **Service Fails to Start**
+
+1. Check logs for errors:
+
+```bash
+docker service logs <SERVICE-NAME>
+```
+
+2. Verify node roles and labels:
+
+```bash
+docker node inspect <NODE-NAME>
+```
+
+**Connectivity Issues** Ensure overlay network (`dj_network`) is functioning:
+
+```bash
+docker exec -it <CONTAINER-ID> ping domserver
+```

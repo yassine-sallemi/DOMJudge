@@ -1,54 +1,83 @@
 services:
   mariadb:
-    container_name: mariadb
-    image: docker.io/mariadb
-    hostname: mariadb
+    image: mariadb
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == mariadb
+      restart_policy:
+        condition: any
     environment:
-      MYSQL_ROOT_PASSWORD: domjudge
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
       MYSQL_USER: domjudge
-      MYSQL_PASSWORD: djpw
+      MYSQL_PASSWORD: ${DB_PASS}
       MYSQL_DATABASE: domjudge
     ports:
       - 13306:3306
     command: --max-connections=1000 --max-allowed-packet=1024M
     volumes:
-      - /var/lib/mysql
+      - mariadb-data:/var/lib/mysql:rw
     networks:
-      - domjudge
+      - dj_network
 
   domserver:
-    container_name: domserver
-    image: docker.io/domjudge/domserver
-    hostname: domserver
+    image: domjudge/domserver
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == domserver
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: domjudge
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}
       MYSQL_USER: domjudge
-      MYSQL_PASSWORD: djpw
+      MYSQL_PASSWORD: ${DB_PASS}
       MYSQL_DATABASE: domjudge
       MYSQL_HOST: mariadb
       CONTAINER_TIMEZONE: Africa/Tunis
       DJ_DB_INSTALL_BARE: 1
     networks:
-      - domjudge
+      - dj_network
     ports:
       - 12345:80
 
-  # Add judgehosts here as many as you need
-  judgehost-0:
-    container_name: judgehost-0
-    image: domjudge/judgehost:latest
-    privileged: true
-    hostname: judgedaemon-0
-    volumes:
-      - /sys/fs/cgroup:/sys/fs/cgroup:rw
-    networks:
-      - domjudge
+  judgehost:
+    image: "ixdotai/swarm-launcher"
+    environment:
+      LAUNCH_IMAGE: "domjudge/judgehost"
+      LAUNCH_PRIVILEGED: "true"
+      LAUNCH_PULL: "true"
+      LAUNCH_ENVIRONMENTS: "DEAMON_ID={{.Task.Slot}} CONTAINER_TIMEZONE=Africa/Tunis DOMSERVER_BASEURL=${DOMSERVER_BASEURL} JUDGEDAEMON_USERNAME=judgehost JUDGEDAEMON_PASSWORD=${JUDGE_PASS}"
+      LAUNCH_VOLUMES: "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      LAUNCH_PROJECT_NAME: "judgehost-{{.Task.Slot}}"
+      LAUNCH_SERVICE_NAME: "judgehost-{{.Task.Slot}}"
+      LAUNCH_CONTAINER_NAME: "judgehost-{{.Task.Slot}}"
+      LAUNCH_EXT_NETWORKS: "{{.Service.Name}}"
+      LAUNCH_HOSTNAME: "judgehost-{{.Task.Slot}}"
     depends_on:
       - domserver
-    environment:
-      - DAEMON_ID=0
-      - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
+    hostname: "judgehost-{{.Task.Slot}}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      restart_policy:
+        condition: on-failure
+      #   delay: 60s
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == judgehost
+    networks:
+      - dj_network
+
+volumes:
+  mariadb-data:
 
 networks:
-  domjudge:
-    driver: bridge
+  dj_network:
+    driver: overlay
+    attachable: true
