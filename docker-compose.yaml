@@ -9,9 +9,9 @@ services:
       restart_policy:
         condition: any
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: domjudgepass
       MYSQL_USER: domjudge
-      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_PASSWORD: domjudgepass
       MYSQL_DATABASE: domjudge
     ports:
       - 13306:3306
@@ -33,9 +33,9 @@ services:
     depends_on:
       - mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASS}
+      MYSQL_ROOT_PASSWORD: domjudgepass
       MYSQL_USER: domjudge
-      MYSQL_PASSWORD: ${DB_PASS}
+      MYSQL_PASSWORD: domjudgepass
       MYSQL_DATABASE: domjudge
       MYSQL_HOST: mariadb
       CONTAINER_TIMEZONE: Africa/Tunis
@@ -46,17 +46,17 @@ services:
       - 12345:80
 
   judgehost:
-    image: "ixdotai/swarm-launcher"
+    image: "lalber/swarm-launcher"
     environment:
       LAUNCH_IMAGE: "domjudge/judgehost"
       LAUNCH_PRIVILEGED: "true"
       LAUNCH_PULL: "true"
-      LAUNCH_ENVIRONMENTS: "DEAMON_ID={{.Task.Slot}} CONTAINER_TIMEZONE=Africa/Tunis DOMSERVER_BASEURL=${DOMSERVER_BASEURL} JUDGEDAEMON_USERNAME=judgehost JUDGEDAEMON_PASSWORD=${JUDGE_PASS}"
+      LAUNCH_ENVIRONMENTS: "DEAMON_ID={{.Task.Slot}} CONTAINER_TIMEZONE=Africa/Tunis DOMSERVER_BASEURL=http://domserver/ JUDGEDAEMON_USERNAME=judgehost JUDGEDAEMON_PASSWORD=uUe6xHxBezgqlB90BwQzuytSTL994S7C"
       LAUNCH_VOLUMES: "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       LAUNCH_PROJECT_NAME: "judgehost-{{.Task.Slot}}"
       LAUNCH_SERVICE_NAME: "judgehost-{{.Task.Slot}}"
       LAUNCH_CONTAINER_NAME: "judgehost-{{.Task.Slot}}"
-      LAUNCH_EXT_NETWORKS: "{{.Service.Name}}"
+      LAUNCH_EXT_NETWORKS: "domjudge_dj_network"
       LAUNCH_HOSTNAME: "judgehost-{{.Task.Slot}}"
     depends_on:
       - domserver
