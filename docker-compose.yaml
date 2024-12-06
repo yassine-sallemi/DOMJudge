@@ -49,6 +49,51 @@ services:
       - DAEMON_ID=0
       - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
 
+  judgehost-1:
+    container_name: judgehost-1
+    image: domjudge/judgehost:latest
+    privileged: true
+    hostname: judgedaemon-1
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - domjudge
+    depends_on:
+      - domserver
+    environment:
+      - DAEMON_ID=1
+      - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
+
+  judgehost-2:
+    container_name: judgehost-2
+    image: domjudge/judgehost:latest
+    privileged: true
+    hostname: judgedaemon-2
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - domjudge
+    depends_on:
+      - domserver
+    environment:
+      - DAEMON_ID=2
+      - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
+
+  judgehost-3:
+    container_name: judgehost-3
+    image: domjudge/judgehost:latest
+    privileged: true
+    hostname: judgedaemon-3
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      - domjudge
+    depends_on:
+      - domserver
+    environment:
+      - DAEMON_ID=3
+      - JUDGEDAEMON_PASSWORD=TO_BE_REPLACED_AFTER_DOMSERVER_INIT
+
 networks:
   domjudge:
     driver: bridge
